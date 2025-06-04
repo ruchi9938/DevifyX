@@ -1,0 +1,135 @@
+{% extends 'Quiz/dependencies.html' %}
+{% load quiz_filters %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-12">
+            <h1 class="text-center mb-4">Admin Dashboard</h1>
+        </div>
+    </div>
+
+    <div class="row mb-4">
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Users</h5>
+                    <p class="card-text display-4">{{ total_users }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Questions</h5>
+                    <p class="card-text display-4">{{ total_questions }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Total Attempts</h5>
+                    <p class="card-text display-4">{{ total_attempts }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-3">
+            <div class="card">
+                <div class="card-body text-center">
+                    <h5 class="card-title">Success Rate</h5>
+                    <p class="card-text display-4">
+                        {% if total_attempts > 0 %}
+                            {{ correct_attempts|multiply:100|divisibleby:total_attempts }}%
+                        {% else %}
+                            0%
+                        {% endif %}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Recent Activity</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>User</th>
+                                    <th>Question</th>
+                                    <th>Result</th>
+                                    <th>Time</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for attempt in recent_attempts %}
+                                <tr>
+                                    <td>{{ attempt.user.username }}</td>
+                                    <td>{{ attempt.question.question|truncatechars:30 }}</td>
+                                    <td>
+                                        {% if attempt.is_correct %}
+                                            <span class="badge bg-success">Correct</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Incorrect</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ attempt.attempted_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">No recent activity</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Category Statistics</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Questions</th>
+                                    <th>Attempts</th>
+                                    <th>Success Rate</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for stat in category_stats %}
+                                <tr>
+                                    <td>{{ stat.name }}</td>
+                                    <td>{{ stat.question_count }}</td>
+                                    <td>{{ stat.attempt_count }}</td>
+                                    <td>
+                                        {% if stat.attempt_count > 0 %}
+                                            {{ stat.correct_count|default:0|multiply:100|divisibleby:stat.attempt_count }}%
+                                        {% else %}
+                                            0%
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 

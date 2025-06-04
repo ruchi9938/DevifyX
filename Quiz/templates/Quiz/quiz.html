@@ -1,0 +1,194 @@
+{% extends 'Quiz/dependencies.html' %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header">
+                    <h2 class="text-center">Quiz</h2>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">
+                                {{ message }}
+                                <div class="text-center mt-3">
+                                    <a href="{% url 'home' %}" class="btn btn-primary">Return to Home</a>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% elif questions %}
+                        <form id="quiz-form">
+                            {% csrf_token %}
+                            {% for question in questions %}
+                                <div class="question-container mb-4" data-question-id="{{ question.id }}">
+                                    <h4 class="mb-3">Question {{ forloop.counter }}: {{ question.question }}</h4>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="op1" required>
+                                        <label class="form-check-label">{{ question.op1 }}</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="op2" required>
+                                        <label class="form-check-label">{{ question.op2 }}</label>
+                                    </div>
+                                    <div class="form-check mb-2">
+                                        <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="op3" required>
+                                        <label class="form-check-label">{{ question.op3 }}</label>
+                                    </div>
+                                    <div class="form-check mb-3">
+                                        <input class="form-check-input" type="radio" name="answer_{{ question.id }}" value="op4" required>
+                                        <label class="form-check-label">{{ question.op4 }}</label>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            <div class="text-center mt-4">
+                                <button type="submit" class="btn btn-primary btn-lg">Submit Quiz</button>
+                            </div>
+                        </form>
+                        <div id="quiz-results" class="mt-4" style="display: none;">
+                            <h3 class="text-center mb-4">Quiz Results</h3>
+                            <div class="results-container"></div>
+                            <div class="text-center mt-4">
+                                <a href="{% url 'home' %}" class="btn btn-secondary">Back to Home</a>
+                            </div>
+                        </div>
+                        <div id="error-message" class="alert alert-danger mt-3" style="display: none;"></div>
+                    {% else %}
+                        <div class="alert alert-info">
+                            No questions available for this category.
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const quizForm = document.getElementById('quiz-form');
+    const resultsDiv = document.getElementById('quiz-results');
+    const resultsContainer = document.querySelector('.results-container');
+    const errorMessage = document.getElementById('error-message');
+    
+    if (quizForm) {
+        quizForm.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            // Hide any previous error messages
+            errorMessage.style.display = 'none';
+            
+            // Disable submit button
+            const submitButton = quizForm.querySelector('button[type="submit"]');
+            submitButton.disabled = true;
+            submitButton.textContent = 'Submitting...';
+            
+            // Collect all answers
+            const answers = [];
+            const questionContainers = document.querySelectorAll('.question-container');
+            
+            questionContainers.forEach(container => {
+                const questionId = container.dataset.questionId;
+                const selectedAnswer = container.querySelector('input[type="radio"]:checked');
+                
+                if (selectedAnswer) {
+                    // Ensure questionId is a number
+                    const numericQuestionId = parseInt(questionId, 10);
+                    if (isNaN(numericQuestionId)) {
+                        console.error(`Invalid question ID: ${questionId}`);
+                        return;
+                    }
+                    
+                    answers.push({
+                        question_id: numericQuestionId,
+                        selected_answer: selectedAnswer.value
+                    });
+                }
+            });
+            
+            if (answers.length === 0) {
+                errorMessage.textContent = 'Please answer at least one question.';
+                errorMessage.style.display = 'block';
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Quiz';
+                return;
+            }
+            
+            // Log the data being sent
+            console.log('Submitting answers:', answers);
+            
+            // Submit all answers
+            fetch(window.location.pathname, {
+                method: 'POST',
+                body: JSON.stringify({
+                    answers: answers
+                }),
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                }
+            })
+            .then(response => {
+                if (!response.ok) {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Network response was not ok');
+                    });
+                }
+                return response.json();
+            })
+            .then(data => {
+                console.log('Received response:', data);
+                
+                // Hide the form and show results
+                quizForm.style.display = 'none';
+                resultsDiv.style.display = 'block';
+                
+                // Display results
+                let resultsHtml = `
+                    <div class="alert alert-info">
+                        <h3 class="text-center mb-4">Quiz Results</h3>
+                        <div class="row">
+                            <div class="col-md-6">
+                                <h4>Your Score: ${data.score} points</h4>
+                                <p>Total Questions: ${data.total_questions}</p>
+                            </div>
+                            <div class="col-md-6">
+                                <h4>Performance</h4>
+                                <p>Correct Answers: ${data.correct_answers}</p>
+                                <p>Incorrect Answers: ${data.incorrect_answers}</p>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                
+                // Add individual question results
+                data.results.forEach(result => {
+                    resultsHtml += `
+                        <div class="card mb-3">
+                            <div class="card-body">
+                                <h5 class="card-title">Question ${result.question_number}</h5>
+                                <p class="card-text">${result.question_text}</p>
+                                <div class="alert ${result.is_correct ? 'alert-success' : 'alert-danger'}">
+                                    Your answer: ${result.selected_answer}<br>
+                                    Correct answer: ${result.correct_answer}
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                resultsContainer.innerHTML = resultsHtml;
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                errorMessage.textContent ='Maximum attempt reached. You are not allowed to take this quiz again';
+                errorMessage.style.display = 'block';
+                submitButton.disabled = false;
+                submitButton.textContent = 'Submit Quiz';
+            });
+        });
+    }
+});
+</script>
+{% endblock %} 

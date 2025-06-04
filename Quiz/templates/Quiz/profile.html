@@ -1,0 +1,115 @@
+{% extends 'Quiz/dependencies.html' %}
+{% load quiz_filters %}
+
+{% block content %}
+<div class="container">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1 class="text-center">User Profile</h1>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h3>Profile Information</h3>
+                </div>
+                <div class="card-body">
+                    <div class="text-center mb-4">
+                        <img src="https://ui-avatars.com/api/?name={{ user.username }}&background=random" 
+                             alt="Profile Picture" 
+                             class="rounded-circle"
+                             style="width: 150px; height: 150px;">
+                    </div>
+                    <h4>{{ user.username }}</h4>
+                    <p class="text-muted">{{ user.email }}</p>
+                    <p>Member since: {{ user.date_joined|date:"F j, Y" }}</p>
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'password_reset' %}" class="btn btn-warning">Change Password</a>
+                        {% if user.is_staff %}
+                        <a href="{% url 'admin_dashboard' %}" class="btn btn-info">Admin Dashboard</a>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h3>Statistics</h3>
+                </div>
+                <div class="card-body">
+                    <div class="list-group">
+                        <div class="list-group-item">
+                            <h5>Total Attempts</h5>
+                            <p class="mb-0">{{ total_attempts }}</p>
+                        </div>
+                        <div class="list-group-item">
+                            <h5>Correct Answers</h5>
+                            <p class="mb-0">{{ correct_attempts }}</p>
+                        </div>
+                        <div class="list-group-item">
+                            <h5>Success Rate</h5>
+                            <p class="mb-0">
+                                {% if total_attempts > 0 %}
+                                    {{ correct_attempts|multiply:100|divisibleby:total_attempts }}%
+                                {% else %}
+                                    0%
+                                {% endif %}
+                            </p>
+                        </div>
+                        <div class="list-group-item">
+                            <h5>Total Score</h5>
+                            <p class="mb-0">{{ total_score }}</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header">
+                    <h3>Quiz History</h3>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-striped">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Question</th>
+                                    <th>Result</th>
+                                    <th>Time Taken</th>
+                                    <th>Date</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for attempt in attempts %}
+                                <tr>
+                                    <td>{{ attempt.question.category.name }}</td>
+                                    <td>{{ attempt.question.question|truncatechars:50 }}</td>
+                                    <td>
+                                        {% if attempt.is_correct %}
+                                            <span class="badge bg-success">Correct</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">Incorrect</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>{{ attempt.time_taken }} seconds</td>
+                                    <td>{{ attempt.attempted_at|date:"M d, Y H:i" }}</td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">No quiz attempts yet.</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %} 
